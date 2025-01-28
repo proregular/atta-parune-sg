@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.green.attaparunever2.restaurant.RestaurantMapper">
+    <insert id="insRestaurant" useGeneratedKeys="true" keyProperty="restaurantId">
+        INSERT INTO restaurant
+           SET admin_id = #{adminId}
+             , category_id = #{categoryId}
+             , restaurant_name = #{restaurantName}
+             , restaurant_address = #{restaurantAddress}
+             , restaurant_number = #{restaurantNumber}
+             , business_number = #{businessNumber}
+             , operating_hours = #{operatingHours}
+             , restaurant_description = #{restaurantDescription}
+             , max_capacity = #{maxCapacity}
+             , lat = #{lat}
+             , lng = #{lng}
+    </insert>
+
+    <select id="selRestaurant">
+        SELECT admin_id AS adminId, category_id AS categoryId, restaurant_name AS restaurantName
+             , restaurant_address AS restaurantAddress, restaurant_number AS restaurantNumber
+             , business_number AS businessNumber, operating_hours AS operatingHours
+             , restaurant_description AS restaurantDescription, `status`
+             , max_capacity AS maxCapacity, lat, lng, created_at AS createdAt
+          FROM restaurant
+         WHERE restaurant_id = #{restaurantId};
+    </select>
+
+    <select id="selRestaurantAround">
+        SELECT F.restaurant_name AS restaurantName
+             , F.restaurant_address AS restaurantAddress
+             , (6371 * ACOS(COS(RADIANS(40)) * COS(RADIANS(F.lat)) * COS(RADIANS(F.lng) - RADIANS(127)) + SIN(RADIANS(40)) * SIN(RADIANS(F.lat)))) AS DISTANCE,
+        IFNULL((
+            SELECT AVG(ABS(TIMESTAMPDIFF(MINUTE, B.reservation_time, C.use_date)))
+              FROM `order` A
+             INNER JOIN reservation B
+                ON A.order_id = B.order_id
+             INNER JOIN ticket C
+                ON B.order_id = C.order_id
+             WHERE A.restaurant_id = F.restaurant_id
+             GROUP BY A.restaurant_id
+        ), 40) AS avgRestaurant
+          FROM restaurant F
+        <if test=" searchFilter != null and searchFilter != '' ">
+         WHERE F.restaurant_name LIKE '%${searchFilter}%'
+        </if>
+           AND `status` = 0
+        <if test = " orderFilter != null and orderFilter != '' ">
+           AND lat &gt; #{sysMinLat}
+           AND lat &lt; #{sysMaxLat}
+           AND lng &gt; #{sysMinLng}
+           AND lng &lt; #{sysMaxLng}
+        </if>
+         ORDER BY distance ASC;
+    </select>
+    
+    <insert id="insHoliday">
+        INSERT INTO holiday
+           SET restaurant_id = #{restaurantId}
+             , closed_days = #{closedDays}
+    </insert>
+
+    <select id="selHolidays">
+        SELECT B.closed_days AS closedDays
+        FROM restaurant A
+        INNER JOIN holiday B
+        ON A.restaurant_id = B.restaurant_id
+        WHERE B.restaurant_id = #{restaurantId}
+    </select>
+    
+    <update id="updRestaurant">
+        UPDATE restaurant A
+         INNER JOIN restaurant_pic B
+            ON A.restaurant_id = B.restaurant_id
+            <set>
+                <if test=" restaurantName != null and restaurantName != '' ">
+                    A.restaurant_name = #{restaurantName}
+                </if>
+                <if test=" restaurantAddress != null and restaurantAddress != '' ">
+                    , A.restaurant_address = #{restaurantAddress}
+                </if>
+                <if test=" restaurantNumber != null and restaurantNumber != '' ">
+                    , A.restaurant_number = #{restaurantNumber}
+                </if>
+                <if test=" operatingHours != null and operatingHours != '' ">
+                    , A.operating_hours = #{operatingHours}
+                </if>
+                    , A.restaurant_description = #{restaurantDescription}
+                <if test=" status != null and status != '' ">
+                    , A.`status` = #{status}
+                </if>
+                <if test=" maxCapacity != null and maxCapacity != '' ">
+                    , A.max_capacity = #{maxCapacity}
+                </if>
+                <if test=" lat != null and lat != '' ">
+                    , A.lat = #{lat}
+                </if>
+                <if test=" lng != null and lng != '' ">
+                    , A.lng = #{lng}
+                </if>
+                <if test=" filePath != null and filePath != '' ">
+                    , B.file_path = #{filePath}
+                </if>
+            </set>
+         WHERE A.restaurant_id = #{restaurantId}
+    </update>
+    
+    <update id="updHoliday">
+        UPDATE holiday A
+         INNER JOIN restaurant B
+            ON A.restaurant_id = B.restaurant_id
+        <set>
+            <if test=" closedDays != null and closedDays != '' ">
+                A.closed_days = #{closedDays}
+            </if>
+        </set>
+         WHERE B.restaurant_id = #{restaurantId}
+           AND A.holiday_id = #{holidayId}
+    </update>
+</mapper>

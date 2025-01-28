@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.green.attaparunever2.order.ticket.TicketMapper">
+    <insert id="postTicket" useGeneratedKeys="true" keyProperty="ticketId">
+        INSERT INTO ticket
+        SET order_id = #{orderId}
+        , expired_date = #{expiredDate}
+    </insert>
+
+    <select id="getTicket">
+        SELECT
+        D.restaurant_name AS restaurantName,
+        B.point AS totalAmount,
+        SUM(OD.menu_count) AS menuCount,
+        E.reservation_people_count AS personCount,
+        E.reservation_time AS reservationTime,
+        GROUP_CONCAT(DISTINCT F.menu_name SEPARATOR ', ') AS menuNames
+        FROM `order` C
+        INNER JOIN restaurant D
+        ON C.restaurant_id = D.restaurant_id
+        LEFT JOIN order_detail OD
+        ON C.order_id = OD.order_id
+        LEFT JOIN reservation E
+        ON C.order_id = E.order_id
+        INNER JOIN user_payment_member B
+        ON C.order_id = B.order_id
+        INNER JOIN restaurant_menu F
+        ON OD.menu_id = F.menu_id
+        WHERE C.order_id = #{orderId}
+        GROUP BY C.order_id
+    </select>
+
+
+</mapper>
